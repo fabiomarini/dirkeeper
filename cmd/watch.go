@@ -171,7 +171,6 @@ func initConfig(configFile string) (*WatchConfig, error) {
 
 func watch(config *WatchConfig) error {
 	w := watcher.New()
-	//w.SetMaxEvents(10)
 	w.FilterOps(watcher.Create)
 
 	go func(config *WatchConfig) {

@@ -1,0 +1,26 @@
+watch:
+  # Dry run indicates if the action should be executed or only logged
+  dryRun: false
+  # Can have a list of input directories to watch
+  directories:
+    # The path of the directory to watch
+    - name: "/test/input"
+      # The list of rules to apply
+      rules:
+        # The action to execute for every matching file, can be copy, move or delete
+        - action: "move"
+          pattern:
+            # The list of pattern to match, as regular expressions on file name
+            - "RY59A.*"
+          prefix:
+            # The list of prefixes to match
+          suffix:
+            # Th elist of suffixes to match
+          # The destination directory for the copy or move actions
+          destination: "/tmp/test/outputA"
+
+        - action: "delete"
+          pattern:
+            # Regular expression of file name
+            - "RY59B.*"
+          destination: "/tmp/test/outputB"
