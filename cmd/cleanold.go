@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	CleanOldCmd.PersistentFlags().StringSliceVarP(&cleanOldParams.dirNames, "directory", "d", []string{}, "Directory to cleanup")
+	CleanOldCmd.PersistentFlags().StringSliceVarP(&cleanOldParams.dirNames, "directory", "d", []string{}, "List of directories to cleanup")
 	CleanOldCmd.PersistentFlags().IntVar(&cleanOldParams.maxAgeDays, "max-age", 0, "Maximum age of the file in days")
 	CleanOldCmd.PersistentFlags().BoolVar(&cleanOldParams.dryRun, "dry-run", false, "Only check for old files without deleting")
 }

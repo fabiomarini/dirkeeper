@@ -34,7 +34,7 @@ Usage:
   dirkeeper cleanold [flags]
 
 Flags:
-  -d, --directory strings   Directory to cleanup
+  -d, --directory strings   List of directories to cleanup
       --dry-run             Only check for old files without deleting
   -h, --help                help for cleanold
       --max-age int         Maximum age of the file in days
@@ -54,9 +54,9 @@ Flags:
       --dry-run            Do not execute action
   -h, --help               help for match
       --max-age int        Max file age in minutes
-      --pattern strings    File name pattern
-      --prefix strings     File name prefix
-      --suffix strings     File name suffix
+      --pattern strings    List of file name patterns
+      --prefix strings     List of file name prefixes
+      --suffix strings     List of file name suffixes
 ```
 
 ### watch command
@@ -70,6 +70,6 @@ Usage:
 Flags:
   -c, --config string   Config file
       --debug           Enable debug log
-      --frequency int   Watch frequency (default 10s) (default 10)
+      --frequency int   Watch frequency in seconds (default 10)
   -h, --help            help for watch
 ```

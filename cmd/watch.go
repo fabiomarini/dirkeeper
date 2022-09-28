@@ -20,7 +20,7 @@ import (
 func init() {
 	WatchCmd.PersistentFlags().StringVarP(&watchCmdParams.configFile, "config", "c", "", "Config file")
 	WatchCmd.Flags().BoolVar(&watchCmdParams.debug, "debug", false, "Enable debug log")
-	WatchCmd.Flags().IntVar(&watchCmdParams.frequency, "frequency", 10, "Watch frequency (default 10s)")
+	WatchCmd.Flags().IntVar(&watchCmdParams.frequency, "frequency", 10, "Watch frequency in seconds")
 }
 
 type WatchCmdParamsType struct {

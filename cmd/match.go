@@ -17,9 +17,9 @@ func init() {
 	MatchCmd.PersistentFlags().StringVarP(&matchCmdParams.dirName, "directory", "d", "", "Base directory")
 	MatchCmd.PersistentFlags().StringVar(&matchCmdParams.destDir, "dest-dir", "", "Destination directory")
 	MatchCmd.PersistentFlags().StringVarP(&matchCmdParams.action, "action", "a", "", "Action to execute")
-	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.prefixes, "prefix", []string{}, "File name prefix")
-	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.suffixes, "suffix", []string{}, "File name suffix")
-	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.patterns, "pattern", []string{}, "File name pattern")
+	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.prefixes, "prefix", []string{}, "List of file name prefixes")
+	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.suffixes, "suffix", []string{}, "List of file name suffixes")
+	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.patterns, "pattern", []string{}, "List of file name patterns")
 	MatchCmd.PersistentFlags().BoolVar(&matchCmdParams.dryRun, "dry-run", false, "Do not execute action")
 	MatchCmd.PersistentFlags().IntVar(&matchCmdParams.maxAge, "max-age", 0, "Max file age in minutes")
 }
