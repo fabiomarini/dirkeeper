@@ -16,7 +16,7 @@ import (
 func init() {
 	MatchCmd.PersistentFlags().StringVarP(&matchCmdParams.dirName, "directory", "d", "", "Base directory")
 	MatchCmd.PersistentFlags().StringVar(&matchCmdParams.destDir, "dest-dir", "", "Destination directory")
-	MatchCmd.PersistentFlags().StringVarP(&matchCmdParams.action, "action", "a", "", "Action to execute")
+	MatchCmd.PersistentFlags().StringVarP(&matchCmdParams.action, "action", "a", "", "Action to execute (copy, copy-delete, move, delete")
 	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.prefixes, "prefix", []string{}, "List of file name prefixes")
 	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.suffixes, "suffix", []string{}, "List of file name suffixes")
 	MatchCmd.PersistentFlags().StringSliceVar(&matchCmdParams.patterns, "pattern", []string{}, "List of file name patterns")
@@ -143,7 +143,7 @@ func checkMatchParameters(params matchCmdParamsType) error {
 	}
 
 	switch strings.ToUpper(params.action) {
-	case "COPY", "MOVE":
+	case "COPY", "MOVE", "COPY-DELETE":
 		if len(params.destDir) == 0 {
 			log.Errorln("Missing destination directory")
 			return errors.New("missing destination directory")
@@ -184,16 +184,30 @@ func processFile(action, sourceDir, destDir, fileName string) error {
 		log.Infof("Copying file %v to directory %v", fileName, destDir)
 		if err := copyFile(path.Join(sourceDir, fileName), path.Join(destDir, fileName)); err != nil {
 			log.Errorf("Error copying file %v: %v", fileName, err.Error())
+			return err
+		}
+	case "COPY-DELETE":
+		log.Infof("Copying file %v to directory %v", fileName, destDir)
+		if err := copyFile(path.Join(sourceDir, fileName), path.Join(destDir, fileName)); err != nil {
+			log.Errorf("Error copying file %v: %v", fileName, err.Error())
+			return err
+		}
+		log.Infof("Deleting file %v", fileName)
+		if err := deleteFile(path.Join(sourceDir, fileName)); err != nil {
+			log.Errorf("Error deleting file %v: %v", fileName, err.Error())
+			return err
 		}
 	case "MOVE":
 		log.Infof("Moving file %v to directory %v", fileName, destDir)
 		if err := moveFile(path.Join(sourceDir, fileName), path.Join(destDir, fileName)); err != nil {
 			log.Errorf("Error moving file %v: %v", fileName, err.Error())
+			return err
 		}
 	case "DELETE":
 		log.Infof("Deleting file %v", fileName)
 		if err := deleteFile(path.Join(sourceDir, fileName)); err != nil {
 			log.Errorf("Error deleting file %v: %v", fileName, err.Error())
+			return err
 		}
 	}
 	return nil

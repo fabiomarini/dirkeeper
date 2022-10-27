@@ -122,7 +122,7 @@ func initConfig(configFile string) (*WatchConfig, error) {
 			rule.Action = strings.ToUpper(configRule.Action)
 			dirWatchRule.Action = rule.Action
 			switch rule.Action {
-			case "COPY", "MOVE":
+			case "COPY", "MOVE", "COPY-DELETE":
 				if len(configRule.Destination) == 0 {
 					log.Errorln("Missing destination directory")
 					return nil, errors.New("missing destination directory")
