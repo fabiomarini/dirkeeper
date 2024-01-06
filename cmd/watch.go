@@ -64,7 +64,9 @@ var WatchCmd = &cobra.Command{
 			return err
 
 		}
-		file.Close()
+		if err := file.Close(); err != nil {
+			log.Warnln("Error closing config file", err.Error())
+		}
 
 		config, err := initConfig(watchCmdParams.configFile)
 		if err != nil {
@@ -106,7 +108,9 @@ func initConfig(configFile string) (*WatchConfig, error) {
 		}
 		dirWatchConfig := &outConfig.Directories[i]
 		dirWatchConfig.Name, _ = filepath.Abs(dir.Name())
-		dir.Close()
+		if err := dir.Close(); err != nil {
+			log.Warnln("Error closing destination directory", err.Error())
+		}
 
 		if len(d.Rules) <= 0 {
 			log.Errorln("Missing rules for directory", dirWatchConfig.Name)
@@ -135,7 +139,9 @@ func initConfig(configFile string) (*WatchConfig, error) {
 						return nil, err
 					}
 					dirWatchRule.Destination, _ = filepath.Abs(file.Name())
-					file.Close()
+					if err := file.Close(); err != nil {
+						log.Warnln("Error closing destination directory", err.Error())
+					}
 				}
 
 			case "DELETE":
@@ -182,7 +188,7 @@ func watch(config *WatchConfig) error {
 					continue
 				}
 
-				checkFileMatch(config, event)
+				checkEventMatch(config, event)
 			case err := <-w.Error:
 				log.Errorln(err)
 			case <-w.Closed:
@@ -222,7 +228,7 @@ func watch(config *WatchConfig) error {
 	return nil
 }
 
-func checkFileMatch(config *WatchConfig, event watcher.Event) {
+func checkEventMatch(config *WatchConfig, event watcher.Event) {
 	directory, fileName := filepath.Split(event.Path)
 	directory = path.Clean(directory)
 
@@ -239,10 +245,6 @@ func checkFileMatch(config *WatchConfig, event watcher.Event) {
 			log.Infoln("Skipping symlink", fileName)
 			return
 		}
-
-		//if params.maxAge > 0 && int(time.Now().Sub(fileInfo.ModTime()).Minutes()) > params.maxAge {
-		//	continue
-		//}
 
 		for _, rule := range dirConfig.Rules {
 			for _, prefix := range rule.Prefix {

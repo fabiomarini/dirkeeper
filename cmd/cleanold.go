@@ -40,53 +40,73 @@ func cleanOldFiles(params CleanOldParamsType) error {
 		return err
 	}
 
+	maxAgeDays := params.maxAgeDays
+	dryRun := params.dryRun
+
 	for _, dirName := range params.dirNames {
-		maxAgeDays := params.maxAgeDays
-		dryRun := params.dryRun
-
-		directory, err := os.Open(dirName)
-		if err != nil {
+		if err := cleanupDirectory(dirName, maxAgeDays, dryRun); err != nil {
+			log.Errorln("Error cleaning directory", dirName, err.Error())
 			return err
-		}
-		defer directory.Close()
-
-		dirContent, err := directory.Readdir(-1)
-		if err != nil {
-			return err
-		}
-
-		startDate := time.Now().AddDate(0, 0, -maxAgeDays)
-		log.Infof("Cleaning directory %v from files created before %v (%d days old)", dirName, startDate.Format("2006-01-02"), maxAgeDays)
-		for _, fileInfo := range dirContent {
-			fileName := fileInfo.Name()
-			fileModTime := fileInfo.ModTime()
-			if fileModTime.Before(startDate) {
-				if fileInfo.IsDir() {
-					log.Infoln("Skipping directory", fileName)
-					continue
-				}
-				if fileInfo.Mode() == fs.ModeSymlink {
-					log.Infoln("Skipping symlink", fileName)
-					continue
-				}
-
-				fileAge := time.Now().Sub(fileModTime).Hours() / 24
-				if dryRun {
-					fn := fileName
-					if len(fileName) > 30 {
-						fn = fileName[:27] + "..."
-					}
-					log.Infof("Candidate file %-30v\t%10d bytes\t%v\t%.0f days old", fn, fileInfo.Size(), fileModTime.Format(time.RFC3339), fileAge)
-				} else {
-					log.Infof("Deleting %-30v\t%10d bytes\t%v\t%.0f days old", fileName, fileInfo.Size(), fileModTime.Format(time.RFC3339), fileAge)
-					if err := os.Remove(path.Join(dirName, fileName)); err != nil {
-						log.Errorln("Impossible to delete file", fileName)
-						return err
-					}
-				}
-			}
 		}
 		log.Infoln("Directory", dirName, "cleaned")
+	}
+	return nil
+}
+
+func cleanupDirectory(dirName string, maxAgeDays int, dryRun bool) error {
+	directory, err := os.Open(dirName)
+	if err != nil {
+		return err
+	}
+	defer func(directory *os.File) {
+		err := directory.Close()
+		if err != nil {
+			log.Warnln("Error closing directory", dirName, err.Error())
+		}
+	}(directory)
+
+	dirContent, err := directory.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	startDate := time.Now().AddDate(0, 0, -maxAgeDays)
+	log.Infof("Cleaning directory %v from files created before %v (%d days old)", dirName, startDate.Format("2006-01-02"), maxAgeDays)
+	for _, fileInfo := range dirContent {
+		if err := checkIfFileIsOld(dirName, fileInfo, startDate, dryRun); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkIfFileIsOld(dirName string, fileInfo os.FileInfo, startDate time.Time, dryRun bool) error {
+	fileName := fileInfo.Name()
+	fileModTime := fileInfo.ModTime()
+	if fileModTime.Before(startDate) {
+		if fileInfo.IsDir() {
+			log.Infoln("Skipping directory", fileName)
+			return nil
+		}
+		if fileInfo.Mode() == fs.ModeSymlink {
+			log.Infoln("Skipping symlink", fileName)
+			return nil
+		}
+
+		fileAge := time.Now().Sub(fileModTime).Hours() / 24
+		if dryRun {
+			fn := fileName
+			if len(fileName) > 30 {
+				fn = fileName[:27] + "..."
+			}
+			log.Infof("Candidate file %-30v\t%10d bytes\t%v\t%.0f days old", fn, fileInfo.Size(), fileModTime.Format(time.RFC3339), fileAge)
+		} else {
+			log.Infof("Deleting %-30v\t%10d bytes\t%v\t%.0f days old", fileName, fileInfo.Size(), fileModTime.Format(time.RFC3339), fileAge)
+			if err := os.Remove(path.Join(dirName, fileName)); err != nil {
+				log.Errorln("Impossible to delete file", fileName)
+				return err
+			}
+		}
 	}
 	return nil
 }

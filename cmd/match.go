@@ -54,7 +54,12 @@ func MatchFiles(params matchCmdParamsType) error {
 	if err != nil {
 		return err
 	}
-	defer directory.Close()
+	defer func(directory *os.File) {
+		err := directory.Close()
+		if err != nil {
+			log.Warnln("Error closing directory", params.dirName, err.Error())
+		}
+	}(directory)
 
 	dirContent, err := directory.Readdir(-1)
 	if err != nil {
@@ -69,52 +74,59 @@ func MatchFiles(params matchCmdParamsType) error {
 
 	log.Infof("Scanning directory %v for matches", params.dirName)
 	for _, fileInfo := range dirContent {
-		fileName := fileInfo.Name()
-		if fileInfo.IsDir() {
-			log.Infoln("Skipping directory", fileName)
-			continue
+		if err := checkAndProcessFile(params, fileInfo, patterns); err != nil {
+			return err
 		}
-		if fileInfo.Mode() == fs.ModeSymlink {
-			log.Infoln("Skipping symlink", fileName)
-			continue
-		}
+	}
+	log.Infoln("Directory", params.dirName, "scan complete")
+	return nil
+}
 
-		if params.maxAge > 0 && int(time.Now().Sub(fileInfo.ModTime()).Minutes()) > params.maxAge {
-			continue
-		}
+func checkAndProcessFile(params matchCmdParamsType, fileInfo os.FileInfo, patterns []*regexp.Regexp) error {
+	fileName := fileInfo.Name()
+	if fileInfo.IsDir() {
+		log.Infoln("Skipping directory", fileName)
+		return nil
+	}
+	if fileInfo.Mode() == fs.ModeSymlink {
+		log.Infoln("Skipping symlink", fileName)
+		return nil
+	}
 
-		for _, prefix := range params.prefixes {
-			if strings.HasPrefix(fileName, prefix) {
-				log.Infoln("File", fileName, "matches prefix", prefix)
-				if !params.dryRun {
-					if err := processFile(params.action, params.dirName, params.destDir, fileName); err != nil {
-						log.Errorf("Error processing file %v: %v", fileName, err.Error())
-					}
-				}
-			}
-		}
-		for _, suffix := range params.suffixes {
-			if strings.HasSuffix(fileName, suffix) {
-				log.Infoln("File", fileName, "matches suffix", suffix)
-				if !params.dryRun {
-					if err := processFile(params.action, params.dirName, params.destDir, fileName); err != nil {
-						log.Errorf("Error processing file %v: %v", fileName, err.Error())
-					}
-				}
-			}
-		}
-		for _, pattern := range patterns {
-			if pattern.MatchString(fileName) {
-				log.Infoln("File", fileName, "matches pattern", pattern)
-				if !params.dryRun {
-					if err := processFile(params.action, params.dirName, params.destDir, fileName); err != nil {
-						log.Errorf("Error processing file %v: %v", fileName, err.Error())
-					}
+	if params.maxAge > 0 && int(time.Now().Sub(fileInfo.ModTime()).Minutes()) > params.maxAge {
+		return nil
+	}
+
+	for _, prefix := range params.prefixes {
+		if strings.HasPrefix(fileName, prefix) {
+			log.Infoln("File", fileName, "matches prefix", prefix)
+			if !params.dryRun {
+				if err := processFile(params.action, params.dirName, params.destDir, fileName); err != nil {
+					log.Errorf("Error processing file %v: %v", fileName, err.Error())
 				}
 			}
 		}
 	}
-	log.Infoln("Directory", params.dirName, "scan complete")
+	for _, suffix := range params.suffixes {
+		if strings.HasSuffix(fileName, suffix) {
+			log.Infoln("File", fileName, "matches suffix", suffix)
+			if !params.dryRun {
+				if err := processFile(params.action, params.dirName, params.destDir, fileName); err != nil {
+					log.Errorf("Error processing file %v: %v", fileName, err.Error())
+				}
+			}
+		}
+	}
+	for _, pattern := range patterns {
+		if pattern.MatchString(fileName) {
+			log.Infoln("File", fileName, "matches pattern", pattern)
+			if !params.dryRun {
+				if err := processFile(params.action, params.dirName, params.destDir, fileName); err != nil {
+					log.Errorf("Error processing file %v: %v", fileName, err.Error())
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -124,7 +136,12 @@ func checkMatchParameters(params matchCmdParamsType) error {
 		log.Errorln("Invalid directory", err)
 		return err
 	}
-	defer directory.Close()
+	defer func(directory *os.File) {
+		err := directory.Close()
+		if err != nil {
+			log.Warnln("Error closing directory", params.dirName, err.Error())
+		}
+	}(directory)
 
 	fileIn, err := directory.Stat()
 	if err != nil {
@@ -153,7 +170,9 @@ func checkMatchParameters(params matchCmdParamsType) error {
 			log.Errorln("Invalid directory", err)
 			return err
 		}
-		destDir.Close()
+		if err := destDir.Close(); err != nil {
+			log.Warnln("Error closing destination directory", err.Error())
+		}
 
 	case "DELETE":
 	default:
@@ -218,13 +237,23 @@ func copyFile(fromFile string, toFile string) error {
 	if err != nil {
 		return err
 	}
-	defer from.Close()
+	defer func(from *os.File) {
+		err := from.Close()
+		if err != nil {
+			log.Warnln("Error closing source file", fromFile, err.Error())
+		}
+	}(from)
 
 	to, err := os.Create(toFile)
 	if err != nil {
 		return err
 	}
-	defer to.Close()
+	defer func(to *os.File) {
+		err := to.Close()
+		if err != nil {
+			log.Warnln("Error closing destination file", toFile, err.Error())
+		}
+	}(to)
 
 	_, err = io.Copy(to, from)
 	if err != nil {
