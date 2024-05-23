@@ -13,6 +13,7 @@ func init() {
 	RootCmd.AddCommand(CleanOldCmd)
 	RootCmd.AddCommand(MatchCmd)
 	RootCmd.AddCommand(WatchCmd)
+	RootCmd.AddCommand(FreeSpaceCmd)
 }
 
 func Execute() error {

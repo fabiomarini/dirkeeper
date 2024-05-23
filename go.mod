@@ -3,10 +3,12 @@ module dirkeeper
 go 1.19
 
 require (
+	github.com/dustin/go-humanize v1.0.1
 	github.com/radovskyb/watcher v1.0.7
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
+	github.com/wneessen/go-mail v0.4.1
 )
 
 require (

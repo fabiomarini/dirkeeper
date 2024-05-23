@@ -7,7 +7,7 @@ At the moment the following commands are available:
 - watch: watch one or more directories for the creation of new files and executes an action if the file name matches a condition
 
 ## Command syntax
-```
+```shell
 Directory management utilities
 
 Usage:
@@ -27,7 +27,7 @@ Use "dirkeeper [command] --help" for more information about a command.
 ```
 
 ### cleanold command
-```
+```shell
 clean old files
 
 Usage:
@@ -41,7 +41,7 @@ Flags:
 ```
 
 ### match command
-```
+```shell
 match and process files
 
 Usage:
@@ -61,7 +61,7 @@ Flags:
 
 ### watch command
 Inside the `config` folder you can find an example configuration file
-```
+```shell
 watch for new files and process them based on config rules
 
 Usage:
@@ -72,4 +72,30 @@ Flags:
       --debug           Enable debug log
       --frequency int   Watch frequency in seconds (default 10)
   -h, --help            help for watch
+```
+
+### freespace command
+Checks the available free space on the specified path, and if below a given threshold, sends a notification email.
+
+This command is meant to be run by cron to periodically check the free space.
+```shell
+check free disk space
+
+Usage:
+  dirkeeper freespace [flags]
+
+Flags:
+      --email                  Send email notification
+      --email-to strings       Email address to send notification
+  -h, --help                   help for freespace
+      --limit float            Limit percentage (default 15)
+  -p, --path string            Path to check (default "/")
+      --quiet                  Do not print notification
+      --smtp-from string       SMTP from
+      --smtp-password string   SMTP password
+      --smtp-port int16        SMTP port (default 25)
+      --smtp-server string     SMTP server
+      --smtp-subject string    SMTP subject
+      --smtp-tls               Use TLS
+      --smtp-user string       SMTP user
 ```
