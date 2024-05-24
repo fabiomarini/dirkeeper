@@ -2,27 +2,19 @@ package cmd
 
 import (
 	"bytes"
+	"dirkeeper/internal/utils"
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
-	"github.com/wneessen/go-mail"
 	"os"
 	"syscall"
 	"text/template"
 )
 
 type freeSpaceCmdParamsType struct {
+	utils.EmailParams
 	Path            string
 	LimitPercentage float64
-	Email           bool
-	EmailTo         []string
-	SMTPServer      string
-	SMTPPort        int16
-	SMTPUser        string
-	SMTPPassword    string
-	SMTPFrom        string
-	SMTPTLS         bool
-	SMTPSubject     string
 	Quiet           bool
 }
 
@@ -50,31 +42,26 @@ var FreeSpaceCmd = &cobra.Command{
 func init() {
 	FreeSpaceCmd.Flags().StringVarP(&freeSpaceCmdParams.Path, "path", "p", "/", "Path to check")
 	FreeSpaceCmd.Flags().Float64Var(&freeSpaceCmdParams.LimitPercentage, "limit", 15, "Limit percentage")
-	FreeSpaceCmd.Flags().BoolVar(&freeSpaceCmdParams.Email, "email", false, "Send email notification")
-	FreeSpaceCmd.Flags().StringSliceVar(&freeSpaceCmdParams.EmailTo, "email-to", []string{}, "Email address to send notification")
-	FreeSpaceCmd.Flags().StringVar(&freeSpaceCmdParams.SMTPServer, "smtp-server", "", "SMTP server")
-	FreeSpaceCmd.Flags().Int16Var(&freeSpaceCmdParams.SMTPPort, "smtp-port", 25, "SMTP port")
-	FreeSpaceCmd.Flags().StringVar(&freeSpaceCmdParams.SMTPUser, "smtp-user", "", "SMTP user")
-	FreeSpaceCmd.Flags().StringVar(&freeSpaceCmdParams.SMTPPassword, "smtp-password", "", "SMTP password")
-	FreeSpaceCmd.Flags().StringVar(&freeSpaceCmdParams.SMTPFrom, "smtp-from", "", "SMTP from")
-	FreeSpaceCmd.Flags().BoolVar(&freeSpaceCmdParams.SMTPTLS, "smtp-tls", false, "Use TLS")
-	FreeSpaceCmd.Flags().StringVar(&freeSpaceCmdParams.SMTPSubject, "smtp-subject", "", "SMTP subject")
 	FreeSpaceCmd.Flags().BoolVar(&freeSpaceCmdParams.Quiet, "quiet", false, "Do not print notification")
+	utils.MapFlags(FreeSpaceCmd.Flags(), &freeSpaceCmdParams.EmailParams)
 }
 
 var freeSpaceCmdParams = freeSpaceCmdParamsType{
 	Path:            "/",
 	LimitPercentage: 15,
-	Email:           false,
-	EmailTo:         []string{""},
-	SMTPServer:      "",
-	SMTPPort:        25,
-	SMTPUser:        "",
-	SMTPPassword:    "",
-	SMTPFrom:        "",
-	SMTPTLS:         false,
-	SMTPSubject:     "",
-	Quiet:           false,
+	EmailParams: utils.EmailParams{
+		EmailEnabled: false,
+		EmailTo:      []string{""},
+		SMTPServer:   "",
+		SMTPPort:     25,
+		SMTPUser:     "",
+		SMTPPassword: "",
+		SMTPFrom:     "",
+		SMTPTLS:      false,
+		SMTPAuthType: "plain",
+		SMTPSubject:  "",
+	},
+	Quiet: false,
 }
 
 func checkFreeSpace(params freeSpaceCmdParamsType) (freeSpaceInfoType, error) {
@@ -115,61 +102,26 @@ func checkFreeSpace(params freeSpaceCmdParamsType) (freeSpaceInfoType, error) {
 }
 
 func notifyFreeSpaceError(freeSpaceInfo freeSpaceInfoType, params freeSpaceCmdParamsType) error {
-	if !params.Email {
+	if !params.EmailEnabled {
 		return nil
 	}
-	if !checkEmailParams(params) {
-		return fmt.Errorf("missing email notification parameters")
+	if err := utils.CheckEmailParams(params.EmailParams); err != nil {
+		return err
 	}
 
-	m := mail.NewMsg()
-	if err := m.From(params.SMTPFrom); err != nil {
-		return fmt.Errorf("failed to set From address: %s", err)
-	}
-	if err := m.To(params.EmailTo...); err != nil {
-		return fmt.Errorf("failed to set To address: %s", err)
-	}
+	subject := "Free space notification"
 	if params.SMTPSubject != "" {
-		m.Subject(params.SMTPSubject)
-	} else {
-		m.Subject("Free space notification")
+		subject = params.SMTPSubject
 	}
 	body, err := buildMailBody(freeSpaceInfo)
 	if err != nil {
 		return fmt.Errorf("failed to build mail body: %s", err)
 	}
-	m.SetBodyString(mail.TypeTextPlain, body)
 
 	if !params.Quiet {
 		fmt.Printf("Sending notification email to %v\nInfo: %#v\n", params.EmailTo, freeSpaceInfo)
 	}
-
-	options := make([]mail.Option, 1)
-	options = append(options, mail.WithPort(int(params.SMTPPort)))
-	if !params.SMTPTLS {
-		options = append(options, mail.WithTLSPortPolicy(mail.NoTLS))
-	}
-
-	if params.SMTPUser != "" && params.SMTPPassword != "" {
-		options = append(options,
-			mail.WithSMTPAuth(mail.SMTPAuthPlain),
-			mail.WithUsername(params.SMTPUser),
-			mail.WithPassword(params.SMTPPassword),
-		)
-	}
-
-	c, err := mail.NewClient(params.SMTPServer, options...)
-	if err != nil {
-		return fmt.Errorf("failed to create mail client: %s", err)
-	}
-	if err := c.DialAndSend(m); err != nil {
-		return fmt.Errorf("failed to send mail: %s", err)
-	}
-	return nil
-}
-
-func checkEmailParams(params freeSpaceCmdParamsType) bool {
-	return params.EmailTo != nil && len(params.EmailTo) > 0 && params.SMTPServer != "" && params.SMTPPort != 0 && params.SMTPFrom != ""
+	return utils.SendEmail(subject, body, params.EmailParams)
 }
 
 var mailTemplate = template.Must(template.New("mail").Funcs(map[string]interface{}{
